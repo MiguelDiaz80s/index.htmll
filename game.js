@@ -1,0 +1,26 @@
+let runs=0,wickets=0,balls=0,over=0,target=null,innings=1,score=0,outs=0,shotType="Drive",stroke="Lift",aimX=50,aimY=50,ballTimer=null,delivery={},matchBalls=12;
+const qs=id=>document.getElementById(id);
+function show(id){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));qs(id).classList.add("active")}
+function updateScore(){qs("score").textContent=score+"/"+outs;qs("overs").textContent=Math.floor(balls/6)+"."+balls%6;qs("target").textContent=target?"Target "+target:"12-ball match"}
+function start(){runs=0;wickets=0;balls=0;over=0;score=0;outs=0;target=null;innings=1;qs("inningsTitle").textContent="1st innings — bat!";show("play");newBall()}
+function setStroke(x){stroke=x;document.querySelectorAll("[data-stroke]").forEach(b=>b.classList.toggle("good",b.dataset.stroke===x));qs("stroke").textContent=x}
+function setShot(x){shotType=x;document.querySelectorAll("[data-shot]").forEach(b=>b.classList.toggle("good",b.dataset.shot===x));qs("shot").textContent=x}
+function moveAim(e){const r=qs("aim").getBoundingClientRect();const p=e.touches?e.touches[0]:e;aimX=Math.max(8,Math.min(92,(p.clientX-r.left)/r.width*100));aimY=Math.max(8,Math.min(92,(p.clientY-r.top)/r.height*100));qs("aimdot").style.left=aimX+"%";qs("aimdot").style.top=aimY+"%"}
+function newBall(){if(innings===1&&balls>=matchBalls){finishInnings();return}if(innings===2&&balls>=matchBalls){finishMatch();return}
+const speeds=[118,124,132,138,145];delivery.pace=speeds[Math.floor(Math.random()*speeds.length)];delivery.line=["Yorker","Good length","Short","Full","Outside off"][Math.floor(Math.random()*5)];delivery.movement=["Seam away","Seam in","Swing in","Swing away","Straight"][Math.floor(Math.random()*5)];
+qs("delivery").textContent=delivery.pace+" km/h • "+delivery.line+" • "+delivery.movement;
+const ball=qs("ball");ball.style.transition="none";ball.style.top="18%";ball.style.left=(42+Math.random()*16)+"%";requestAnimationFrame(()=>{ball.style.transition="top .85s cubic-bezier(.2,.65,.35,1),left .85s linear";ball.style.top="63%";});
+qs("status").textContent="Pick your spot, stroke and shot type!"}
+function playShot(){if(ballTimer)return;ballTimer=setTimeout(()=>{resolveShot();ballTimer=null},Math.max(90,360-(delivery.pace-118)*4))}
+function resolveShot(){const timing=Math.random();let quality=0;const idealX=50+(delivery.line==="Outside off"?-12:delivery.line==="Yorker"?5:0);const distance=Math.abs(aimX-idealX);quality+=(distance<14?2:distance<28?1:0);quality+=(stroke==="Lift"&&["Full","Good length"].includes(delivery.line)?1:stroke==="Push"&&delivery.line==="Yorker"?1:0);quality+=(timing>.18?1:0);
+let outcome;if(distance>42){outcome="WICKET"}else if(quality>=4){outcome=shotType==="Loft"?6:["Drive","Sweep","Cut"].includes(shotType)?4:2}else if(quality===3){outcome=Math.random()<.6?4:2}else if(quality===2){outcome=Math.random()<.65?2:1}else if(quality===1){outcome=Math.random()<.25?"WICKET":1}else{outcome=Math.random()<.3?"WICKET":0}
+if(outcome==="WICKET"){outs++;qs("status").textContent="💥 WICKET! "+delivery.movement+" beat you.";flash("WICKET")}else{score+=outcome;qs("status").textContent=outcome===6?"🚀 SIX!":outcome===4?"🔥 FOUR!":outcome===0?"Dot ball.":"Nice! "+outcome+" run"+(outcome===1?"":"s")+".";flash(outcome)}
+balls++;updateScore();if(outs>=3){setTimeout(finishInnings,700);return}setTimeout(newBall,850)}
+function flash(v){qs("result").textContent=v==="WICKET"?"WICKET":v===6?"SIX!":v===4?"FOUR!":"";setTimeout(()=>qs("result").textContent="",500)}
+function finishInnings(){if(innings===1){target=score+1;innings=2;balls=0;outs=0;score=0;qs("inningsTitle").textContent="2nd innings — chase it!";qs("status").textContent="You need "+target+" to win.";updateScore();setTimeout(newBall,1000)}else finishMatch()}
+function finishMatch(){show("resultScreen");qs("final").textContent=score>=target?"🏆 YOU WIN!":score===target-1?"🤝 TIE!":"❌ YOU LOSE";qs("summary").textContent="You scored "+score+"/"+outs+" from "+balls+" balls. Target: "+target+"."}
+function bowl(){show("bowl");qs("bowlStatus").textContent="Choose your delivery.";qs("speedVal").textContent="132 km/h"}
+function speed(v){qs("speedVal").textContent=v+" km/h"}
+function bowlBall(){const s=+qs("speed").value;const type=qs("deliveryType").value;const aim=+qs("bowlAim").value;let result=Math.random();let msg;if(result<.12+(s-110)/500)msg="🏏 WICKET! Perfect "+type+"!";else if(result<.48)msg="Dot ball — "+type+" finds the field.";else if(result<.72)msg="1 run — batter gets it away.";else msg="4 runs — punished!";qs("bowlStatus").textContent=msg;qs("bowlInfo").textContent=s+" km/h • "+type+" • line "+aim+"%"}
+function goMenu(){show("menu")}
+document.addEventListener("DOMContentLoaded",()=>{qs("aim").addEventListener("pointermove",moveAim);qs("aim").addEventListener("pointerdown",moveAim);document.querySelectorAll("[data-stroke]").forEach(b=>b.onclick=()=>setStroke(b.dataset.stroke));document.querySelectorAll("[data-shot]").forEach(b=>b.onclick=()=>setShot(b.dataset.shot));qs("speed").oninput=e=>speed(e.target.value);qs("playBtn").onclick=playShot;qs("startBtn").onclick=start;qs("bowlBtn").onclick=bowl;qs("bowlNow").onclick=bowlBall;qs("menuBtn").onclick=goMenu;qs("again").onclick=start;qs("bowlMenu").onclick=goMenu;updateScore()});
